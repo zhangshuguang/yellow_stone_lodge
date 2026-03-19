@@ -1,20 +1,14 @@
 """Xanterra API client for Yellowstone lodge availability."""
 
+import json
 import logging
+import urllib.parse
 from datetime import date, timedelta
-
-from curl_cffi import requests as cf_requests
 
 logger = logging.getLogger(__name__)
 
 _BASE_URL = "https://webapi.xanterra.net/v1/api"
 _PROPERTY = "yellowstonenationalparklodges"
-_HEADERS = {
-    "Origin": "https://secure.yellowstonenationalparklodges.com",
-    "Referer": "https://secure.yellowstonenationalparklodges.com/",
-    "Accept": "application/json",
-}
-_IMPERSONATE = "chrome124"
 
 # Fallback names for known lodge codes (rooms API returns 404)
 _KNOWN_NAMES = {
@@ -30,12 +24,34 @@ _KNOWN_NAMES = {
 }
 
 
-def fetch_monthly_availability(year: int, month: int, nights: int, timeout: int = 30) -> dict:
+def _fetch_json(url: str, params: dict, timeout: int) -> dict:
+    """Fetch a JSON URL using a real Chromium browser to bypass Cloudflare."""
+    from playwright.sync_api import sync_playwright
+
+    full_url = url + "?" + urllib.parse.urlencode(params)
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(
+            extra_http_headers={
+                "Origin": "https://secure.yellowstonenationalparklodges.com",
+                "Referer": "https://secure.yellowstonenationalparklodges.com/",
+                "Accept": "application/json",
+            }
+        )
+        page = context.new_page()
+        page.goto(full_url, wait_until="networkidle", timeout=timeout * 1000)
+        text = page.inner_text("body")
+        browser.close()
+
+    return json.loads(text)
+
+
+def fetch_monthly_availability(year: int, month: int, nights: int, timeout: int = 60) -> dict:
     """GET availability for the given month.
 
     Returns a dict keyed by ISO date string (YYYY-MM-DD), values are
     dicts of {hotel_code: hotel_info}.
-    Raises curl_cffi.requests.RequestsError on network error.
     Raises ValueError if response is malformed.
     """
     url = f"{_BASE_URL}/availability/hotels/{_PROPERTY}"
@@ -45,12 +61,7 @@ def fetch_monthly_availability(year: int, month: int, nights: int, timeout: int 
         "rate_code": "INTERNET",
         "nights": nights,
     }
-    response = cf_requests.get(
-        url, params=params, headers=_HEADERS, impersonate=_IMPERSONATE, timeout=timeout
-    )
-    response.raise_for_status()
-
-    data = response.json()
+    data = _fetch_json(url, params, timeout)
     if "availability" not in data:
         raise ValueError(
             f"Unexpected API response: missing 'availability' key. Got: {list(data.keys())}"

@@ -22,6 +22,8 @@ jobs:
 
       - run: pip install -r requirements.txt
 
+      - run: playwright install chromium --with-deps
+
       - name: Write config
         run: echo "${{ secrets.CONFIG_YAML }}" > config.yaml
 

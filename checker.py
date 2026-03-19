@@ -1,6 +1,7 @@
 """Main entry point for the Yellowstone lodge availability checker."""
 
 import hashlib
+import json
 import logging
 import os
 import smtplib
@@ -95,11 +96,11 @@ def main() -> None:
     try:
         available = find_available_lodges(check_in, check_out, lodge_filter)
     except Exception as exc:
-        from curl_cffi.requests import RequestsError
-        if isinstance(exc, RequestsError):
+        from playwright._impl._errors import Error as PlaywrightError
+        if isinstance(exc, (PlaywrightError, TimeoutError)):
             logger.warning("Network error fetching availability: %s", exc)
             sys.exit(0)
-        elif isinstance(exc, ValueError):
+        elif isinstance(exc, (ValueError, json.JSONDecodeError)):
             logger.warning("Bad API response: %s", exc)
             sys.exit(0)
         raise
