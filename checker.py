@@ -41,10 +41,12 @@ def load_config(path: str = "config.yaml") -> dict:
         if key not in email_cfg:
             sys.exit(f"Error: missing required email config key: '{key}'")
 
-    # Validate dates
+    # Validate dates (YAML may parse unquoted dates as date objects)
     try:
-        ci = date.fromisoformat(config["check_in"])
-        co = date.fromisoformat(config["check_out"])
+        ci = config["check_in"] if isinstance(config["check_in"], date) else date.fromisoformat(str(config["check_in"]))
+        co = config["check_out"] if isinstance(config["check_out"], date) else date.fromisoformat(str(config["check_out"]))
+        config["check_in"] = ci.isoformat()
+        config["check_out"] = co.isoformat()
     except ValueError as exc:
         sys.exit(f"Error: invalid date in config: {exc}")
 
