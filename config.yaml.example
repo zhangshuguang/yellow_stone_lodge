@@ -1,0 +1,11 @@
+check_in: "2026-07-15"
+check_out: "2026-07-18"
+
+# Known codes: YLOD (Old Faithful Snow Lodge), YLMM (Mammoth Hot Springs),
+#              YLOG (Lake Lodge), YLOF (Old Faithful Lodge), YLOL (Lake Hotel)
+lodges: any   # or: ["YLOD", "YLMM"]
+
+email:
+  sender: "yourbot@yahoo.com"
+  recipient: "you@example.com"
+  # Password via env var: YAHOO_SMTP_PASSWORD
