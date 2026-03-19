@@ -12,13 +12,13 @@ _SMTP_PORT = 587
 
 def send_availability_email(
     sender: str,
-    recipient: str,
+    recipients: list,
     password: str,
     check_in: str,
     check_out: str,
     available_lodges: list,
 ) -> None:
-    """Send an email listing available lodges.
+    """Send an email listing available lodges to one or more recipients.
 
     Raises smtplib.SMTPException on failure.
     """
@@ -38,12 +38,12 @@ def send_availability_email(
     msg = MIMEText(body)
     msg["Subject"] = subject
     msg["From"] = sender
-    msg["To"] = recipient
+    msg["To"] = ", ".join(recipients)
 
-    logger.info("Sending availability email to %s...", recipient)
+    logger.info("Sending availability email to %s...", ", ".join(recipients))
     with smtplib.SMTP(_SMTP_HOST, _SMTP_PORT) as smtp:
         smtp.ehlo()
         smtp.starttls()
         smtp.login(sender, password)
-        smtp.sendmail(sender, recipient, msg.as_string())
+        smtp.sendmail(sender, recipients, msg.as_string())
     logger.info("Email sent successfully.")

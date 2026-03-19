@@ -119,9 +119,11 @@ def main() -> None:
         logger.info("  %s (%s) — %s", lodge["lodge_name"], lodge["hotel_code"], lodge["booking_url"])
 
     try:
+        recipient = email_cfg["recipient"]
+        recipients = recipient if isinstance(recipient, list) else [recipient]
         send_availability_email(
             sender=email_cfg["sender"],
-            recipient=email_cfg["recipient"],
+            recipients=recipients,
             password=password,
             check_in=check_in,
             check_out=check_out,

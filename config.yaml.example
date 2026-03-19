@@ -7,5 +7,7 @@ lodges: any   # or: ["YLOD", "YLMM"]
 
 email:
   sender: "yourbot@yahoo.com"
-  recipient: "you@example.com"
+  recipient:
+    - "you@example.com"
+    - "another@example.com"
   # Password via env var: YAHOO_SMTP_PASSWORD
