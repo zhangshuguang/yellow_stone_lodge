@@ -24,21 +24,35 @@ _KNOWN_NAMES = {
 }
 
 
+_EXTRA_HEADERS = {
+    "Origin": "https://secure.yellowstonenationalparklodges.com",
+    "Referer": "https://secure.yellowstonenationalparklodges.com/",
+    "Accept": "application/json",
+}
+
+
 def _fetch_json(url: str, params: dict, timeout: int) -> dict:
-    """Fetch a JSON URL using a real Chromium browser to bypass Cloudflare."""
+    """Fetch a JSON URL, trying curl_cffi first then Playwright as fallback."""
+    # Try curl_cffi first — fast, works on residential IPs (e.g. local dev)
+    try:
+        from curl_cffi import requests as cf_requests
+        response = cf_requests.get(
+            url, params=params, headers=_EXTRA_HEADERS,
+            impersonate="chrome124", timeout=timeout
+        )
+        if response.status_code == 200:
+            return response.json()
+        logger.debug("curl_cffi got %d, falling back to Playwright", response.status_code)
+    except Exception as exc:
+        logger.debug("curl_cffi failed (%s), falling back to Playwright", exc)
+
+    # Fallback: real Chromium browser — works on cloud IPs (e.g. GitHub Actions)
     from playwright.sync_api import sync_playwright
 
     full_url = url + "?" + urllib.parse.urlencode(params)
-
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            extra_http_headers={
-                "Origin": "https://secure.yellowstonenationalparklodges.com",
-                "Referer": "https://secure.yellowstonenationalparklodges.com/",
-                "Accept": "application/json",
-            }
-        )
+        context = browser.new_context(extra_http_headers=_EXTRA_HEADERS)
         page = context.new_page()
         page.goto(full_url, wait_until="networkidle", timeout=timeout * 1000)
         text = page.inner_text("body")
